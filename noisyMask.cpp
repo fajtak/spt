@@ -88,3 +88,22 @@ void NoisyMask::LoadNoisyMask(void)
 
     noisyMaskFile.close();
 }
+
+void NoisyMask::CoutNoisyMask(void)
+{
+    for (int y = 0 ; y < cyDim ; y++)
+        for (int x = 0 ; x < cxDim ; x++)
+        {
+            cout << m_pixelsBool[x][y];
+        }
+        cout << endl;
+}
+
+void NoisyMask::CoutNoisyMaskRow(int myRow)
+{
+    for (int x = 0 ; x < cxDim ; x++)
+    {
+        cout << m_pixelsBool[x][myRow];
+    }
+    cout << endl;
+}

@@ -28,6 +28,8 @@ class NoisyMask
         bool IsGood(int x, int y){return m_pixelsBool[x][y];};
         int GetNHits(int x, int y){return m_pixels[x][y];};
         double GetEnergy (int x, int y){return m_pixelsEnergy[x][y];};
+        void CoutNoisyMask (void);
+        void CoutNoisyMaskRow (int myRow);
 
         void SaveNoisyMask(void);
         void LoadNoisyMask(void);

@@ -7,17 +7,17 @@ Frame::Frame(void)
     m_nClusters = 0;
 }
 
-void Frame::AddCluster(string oneLine)
+void Frame::AddCluster(string oneLine, NoisyMask& myNoisyMask)
 {
-    m_clusters.push_back(Cluster());
-
     int nPixels = count(oneLine.begin(),oneLine.end(),'[');
-    m_clusters.back().SetSize(nPixels);
-    m_clusters.back().SetGood(true);
 
     int pos1 = 0;
     double xPos = 0;
     double yPos = 0;
+
+    m_clusters.push_back(Cluster());
+    m_clusters.back().SetSize(nPixels);
+    m_clusters.back().SetGood(true);
 
     for (int idP = 0; idP < nPixels ; idP++)
     {
@@ -26,6 +26,11 @@ void Frame::AddCluster(string oneLine)
         oneLine = oneLine.substr(pos1+2);
         xPos += m_clusters.back().GetXPos(idP);
         yPos += m_clusters.back().GetYPos(idP);
+        if (!myNoisyMask.IsGood(m_clusters.back().GetXPos(idP),m_clusters.back().GetYPos(idP)))
+        {
+            m_clusters.pop_back();
+            return;
+        }
     }
     xPos /= m_clusters.back().GetSize();
     yPos /= m_clusters.back().GetSize();

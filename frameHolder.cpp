@@ -7,6 +7,10 @@ double FrameHolder::CountDist(Cluster &a, Cluster &b)
 
 void FrameHolder::AddFrame(string oneLine)
 {
+    if ((m_frames.size()>10)&&(m_frames.back().GetNClusters() == 0))
+    {
+        m_frames.pop_back();
+    }
 	m_frames.push_back(Frame());
     int pos1 = oneLine.find("(");
     int pos2 = oneLine.find("s");
@@ -14,6 +18,7 @@ void FrameHolder::AddFrame(string oneLine)
     m_frames.back().SetID(atoi(oneLine.substr(5,pos1-1).c_str()));
     m_frames.back().SetTime(atof(oneLine.substr(pos1+1,pos2-2).c_str()));
     m_frames.back().SetAcqTime(atof(oneLine.substr(pos2+3,pos3-3).c_str()));
+    m_frames.back().SetOID(m_nFrames);
     m_nFrames++;
 }
 
@@ -43,15 +48,15 @@ void FrameHolder::ReadData(vector<string> &dataFiles)
                 if (oneLine[0] == 'F')
                     AddFrame(oneLine);
                 else if (oneLine[0] == '[')
-                    m_frames.back().AddCluster(oneLine);
+                    m_frames.back().AddCluster(oneLine,m_noisyMask);
                 else
                     ;
             }
         }
         m_dataFile.close();
-        m_nFrames = m_frames.size();
+        //m_nFrames = m_frames.size();
         time += m_frames[m_frames.size()-1].GetTime() - m_frames[frame].GetTime();
-        acqTimeWD += (m_frames.size()-frame)*m_frames[m_frames.size()-1].GetAcqTime();
+        acqTimeWD += (m_frames[m_frames.size()-1].GetOID()-m_frames[frame].GetOID())*m_frames[m_frames.size()-1].GetAcqTime();
         frame = m_frames.size();
     }
     cout << "Stop reading!" << endl;
@@ -59,9 +64,54 @@ void FrameHolder::ReadData(vector<string> &dataFiles)
     cout << "Data per " << acqTimeWD/3600/24 << " days / " << time/3600/24 << " days" << endl;
 }
 
+void FrameHolder::PreMasking(vector<string> &dataFiles, int threshold)
+{
+    for (int idFile = 0 ; idFile < dataFiles.size() ; idFile++)
+    {
+        m_dataFileName = dataFiles[idFile];
+        m_dataFile.open(m_dataFileName);
+
+        string oneLine;
+        string anotherLine;
+        int pos1 = 0;
+
+        if (!m_dataFile)
+        {
+            // Print an error and exit
+            cerr << "Uh oh, your file \"" << m_dataFileName << "\" could not be opened for reading!" << endl;
+        }else{
+            //cout << "File \"" << m_name << "\" is open and ready for reading!" << endl;
+            cout << "Start pre-reading file : " << m_dataFileName << endl;
+            while(m_dataFile)
+            {
+                getline(m_dataFile,oneLine);
+                if (oneLine[0] == '[')
+                {
+                    int nPixels = count(oneLine.begin(),oneLine.end(),'[');
+                    for (int idP = 0; idP < nPixels ; idP++)
+                    {
+                        pos1 = oneLine.find("]");
+                        anotherLine = oneLine.substr(1,pos1-1);
+                        {
+                            int pos1 = anotherLine.find(",");
+                            int pos2 = anotherLine.rfind(",");
+                            m_noisyMask.AddHit(atoi(anotherLine.substr(0,pos1).c_str()),atoi(anotherLine.substr(pos1+1,pos2).c_str()),0);
+                        }
+                        oneLine = oneLine.substr(pos1+2);
+                    }
+                }
+                else
+                    ;
+            }
+        }
+        m_dataFile.close();
+    }
+    m_noisyMask.SetThreshold(threshold);
+}
+
 void FrameHolder::UseCalib(bool useCalib)
 {
-    for (int idF = 0 ; idF < m_nFrames; idF++)
+    for (int idF = 0 ; idF < m_frames.size(); idF++)
     {
         for (int idC = 0 ; idC < m_frames[idF].GetNClusters(); idC++)
         {
@@ -141,26 +191,20 @@ int FrameHolder::CreateHist(string subFolder)
 
     m_noisyMask.Clear();
 
-    int nFrames = 0;
-    int round = 0;
-    int nFramesDetail = 0;
-    int roundDetail = 0;
     int nClusters = 0;
-    double clusterEnergy = 0;
-    double clusterEnergyDetail = 0;
 
-    for (int idF = 0 ; idF < m_nFrames; idF++)
+    for (int idF = 0 ; idF < m_frames.size(); idF++)
     {
         hNClusterPerFrame->Fill(m_frames[idF].GetNGoodClusters());
-        nFrames += m_frames[idF].GetNGoodClusters();
-        nFramesDetail += m_frames[idF].GetNGoodClusters();
+        hNClusterHistory->Fill(m_frames[idF].GetOID()/10000,m_frames[idF].GetNGoodClusters());
+        hNClusterHistoryDetail->Fill(m_frames[idF].GetOID()/100,m_frames[idF].GetNGoodClusters());
         nClusters += m_frames[idF].GetNGoodClusters();
         for (int idC = 0 ; idC < m_frames[idF].GetNClusters(); idC++)
         {
             if (m_frames[idF].GetCluster(idC).GetGood())
             {
-                clusterEnergy += m_frames[idF].GetCluster(idC).GetEnergy();
-                clusterEnergyDetail += m_frames[idF].GetCluster(idC).GetEnergy();
+                hEnergyHistory->Fill(m_frames[idF].GetOID()/100000,m_frames[idF].GetCluster(idC).GetEnergy());
+                hEnergyHistoryDetail->Fill(m_frames[idF].GetOID()/1000,m_frames[idF].GetCluster(idC).GetEnergy());
                 hClusterSize->Fill(m_frames[idF].GetCluster(idC).GetSize());
                 hEnergySpectrum->Fill(m_frames[idF].GetCluster(idC).GetEnergy());
                 for (int idP = 0 ; idP < m_frames[idF].GetCluster(idC).GetSize(); idP++)
@@ -169,23 +213,6 @@ int FrameHolder::CreateHist(string subFolder)
                     m_noisyMask.AddHit(m_frames[idF].GetCluster(idC).GetXPos(idP),m_frames[idF].GetCluster(idC).GetYPos(idP),m_frames[idF].GetCluster(idC).GetEnergy(idP));
                 }
             }
-        }
-        if (idF % 10000 == 0)
-        {
-            //cout << clusterEnergy << endl;
-            hNClusterHistory->Fill(round,nFrames);
-            hEnergyHistory->Fill(round,clusterEnergy);
-            nFrames = 0;
-            clusterEnergy = 0;
-            round++;
-        }
-        if (idF % 100 == 0)
-        {
-            hNClusterHistoryDetail->Fill(roundDetail,nFramesDetail);
-            hEnergyHistoryDetail->Fill(roundDetail,clusterEnergyDetail);
-            nFramesDetail = 0;
-            clusterEnergyDetail = 0;
-            roundDetail++;
         }
     }
     for (int x = 0 ; x < 512; x++)
@@ -203,7 +230,7 @@ int FrameHolder::CreateHist(string subFolder)
     TH1D* hCountOnPixelColumns = hNCountOnPixelMap->ProjectionX("hCountOnPixelColumns");
 
     int threshold = 0;
-    double mean = hNCountOnPixel->GetMean();
+    /*double mean = hNCountOnPixel->GetMean();
     for (int i = 0 ; i < 100 ; i++)
     {
         if (TMath::Poisson(i,mean)*256*512 < 1)
@@ -211,7 +238,7 @@ int FrameHolder::CreateHist(string subFolder)
             threshold = i;
             break;
         }
-    }
+    }*/
 
     hNCountOnPixelMap->Write();
     hNClusterPerFrame->Write();
@@ -252,7 +279,7 @@ void FrameHolder::MaskClusters(string subFolder)
 
     TH1I* hSizeMaskedClusters = new TH1I("hSizeMaskedClusters","Size of masked clusters",100,0,100);
 
-    for (int idF = 0 ; idF < m_nFrames; idF++)
+    for (int idF = 0 ; idF < m_frames.size(); idF++)
     {
         for (int idC = 0 ; idC < m_frames[idF].GetNClusters(); idC++)
         {
@@ -282,7 +309,7 @@ void FrameHolder::MaskClusters(string subFolder)
 void FrameHolder::EnergyCuts(double lowerLimit, double upperLimit)
 {
     cout << "Energy cuts : " << endl;
-    for (int idF = 0 ; idF < m_nFrames; idF++)
+    for (int idF = 0 ; idF < m_frames.size(); idF++)
     {
         for (int idC = 0 ; idC < m_frames[idF].GetNClusters(); idC++)
         {
@@ -299,7 +326,7 @@ void FrameHolder::SizeCuts(int howMany)
 {
     cout << "Size cuts : " << endl;
 
-    for (int idF = 0 ; idF < m_nFrames; idF++)
+    for (int idF = 0 ; idF < m_frames.size(); idF++)
     {
         if (m_frames[idF].GetNGoodClusters() > 2)
         {

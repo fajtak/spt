@@ -34,6 +34,8 @@ class FrameHolder
 
         double CountDist(Cluster &a, Cluster &b);
 
+        void PreMasking(vector<string> &dataFiles, int threshold);
+
 		void ProduceResults(int threshold);
 
 		int CreateHist(string subfolder);

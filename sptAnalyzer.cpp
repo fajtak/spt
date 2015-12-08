@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
 
     myFrameHolder.SetName(resultsFile);
     myFrameHolder.SetNoisyMaskFileName(noisyMaskFile);
+    myFrameHolder.PreMasking(dataFiles,threshold);
     myFrameHolder.ReadData(dataFiles);
     myFrameHolder.LoadCalib(calibFolder,useCalib);
     myFrameHolder.ProduceResults(threshold);
