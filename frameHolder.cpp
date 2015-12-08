@@ -129,7 +129,7 @@ void FrameHolder::UseCalib(bool useCalib)
 void FrameHolder::ProduceResults(int threshold)
 {
     m_rootFile = new TFile(m_rootFileName.c_str(),"Recreate");
-    m_rootFile->mkdir("Raw_Data");
+    //m_rootFile->mkdir("Raw_Data");
     m_rootFile->mkdir("After_Masking");
     m_rootFile->mkdir("Energy_Cuts");
     m_rootFile->mkdir("Size_Cuts");
@@ -144,11 +144,11 @@ void FrameHolder::ProduceResults(int threshold)
     }
     cout << "Output file " <<  m_rootFileName << " opened..." << endl;
 
-    CreateHist("Raw_Data");
+    //CreateHist("Raw_Data");
     cout << "Threshold set : " << threshold << endl;
 
-    int nMaskedPixels = 256*512 - m_noisyMask.SetThreshold(threshold);
-    MaskClusters("After_Masking");
+    int nMaskedPixels = m_noisyMask.GetNGood();
+    //MaskClusters("After_Masking");
     cout << "Number of masked pixels : " << nMaskedPixels << endl;
     CreateHist("After_Masking");
 
@@ -215,6 +215,7 @@ int FrameHolder::CreateHist(string subFolder)
             }
         }
     }
+    hNClusterPerFrame->Fill(0.1,m_nFrames-m_frames.size());
     for (int x = 0 ; x < 512; x++)
         for (int y = 0 ; y < 256; y++)
         {
