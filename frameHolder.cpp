@@ -1,4 +1,5 @@
 #include "frameHolder.h"
+#include "TCanvas.h"
 
 double FrameHolder::CountDist(Cluster &a, Cluster &b)
 {
@@ -27,6 +28,8 @@ void FrameHolder::ReadData(vector<string> &dataFiles)
     double time = 0;
     int frame = 0;
     double acqTimeWD = 0;
+    m_noisyMask.LoadNoisyMask();
+    m_noisyMask.Update();
 
     for (int idFile = 0 ; idFile < dataFiles.size() ; idFile++)
     {
@@ -107,6 +110,32 @@ void FrameHolder::PreMasking(vector<string> &dataFiles, int threshold)
         m_dataFile.close();
     }
     m_noisyMask.SetThreshold(threshold);
+
+    cout << "Threshold set : " << threshold << endl;
+
+    int nMaskedPixels = 512*256 - m_noisyMask.GetNGood();
+    cout << "Number of masked pixels : " << nMaskedPixels << endl;
+
+    TCanvas* myCan = new TCanvas("myCan","Results",800,600);
+    TH1F* hNCountOnPixel = new TH1F("hNCountOnPixel","How many pixels gave X signals",200,0,200);
+    for (int x = 0 ; x < 512 ; x++)
+        for (int y = 0 ; y < 256 ; y++)
+        {
+            if (m_noisyMask.GetNHits(x,y) >= 200)
+            {
+                hNCountOnPixel->Fill(199);
+            }else{
+                hNCountOnPixel->Fill(m_noisyMask.GetNHits(x,y));
+            }
+        }
+    hNCountOnPixel->Draw();
+    myCan->SetLogy();
+    string fileName = m_rootFileName.substr(m_rootFileName.size()-10,5);
+    fileName += ".png";
+    myCan->SaveAs(fileName.c_str());
+    delete hNCountOnPixel;
+    delete myCan;
+    m_noisyMask.SaveNoisyMask();
 }
 
 void FrameHolder::UseCalib(bool useCalib)
@@ -143,13 +172,7 @@ void FrameHolder::ProduceResults(int threshold)
         exit(1);
     }
     cout << "Output file " <<  m_rootFileName << " opened..." << endl;
-
-    //CreateHist("Raw_Data");
-    cout << "Threshold set : " << threshold << endl;
-
-    int nMaskedPixels = m_noisyMask.GetNGood();
     //MaskClusters("After_Masking");
-    cout << "Number of masked pixels : " << nMaskedPixels << endl;
     CreateHist("After_Masking");
 
     EnergyCuts(6,10000);
@@ -215,7 +238,7 @@ int FrameHolder::CreateHist(string subFolder)
             }
         }
     }
-    hNClusterPerFrame->Fill(0.1,m_nFrames-m_frames.size());
+    hNClusterPerFrame->Fill(0.0,m_nFrames-m_frames.size());
     for (int x = 0 ; x < 512; x++)
         for (int y = 0 ; y < 256; y++)
         {

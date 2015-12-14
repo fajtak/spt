@@ -64,7 +64,16 @@ int main(int argc, char* argv[])
     dataFiles.push_back("/windows/sptData/201410100955/");
     dataFiles.push_back("/windows/sptData/201411191500/");
     dataFiles.push_back("/windows/sptData/201502071500/");
-    //dataFiles.push_back("/windows/sptData/201503191800/");
+    //dataFiles.push_back("/windows/sptData/201502241704/");
+    //dataFiles.push_back("/windows/sptData/201503121110/");
+    //dataFiles.push_back("/windows/sptData/201503121110/");
+    dataFiles.push_back("/windows/sptData/201503191800/"); // 1s acquisition
+    //dataFiles.push_back("/windows/sptData/201504021600/"); // 5s acquisition
+    //dataFiles.push_back("/windows/sptData/201505181632/");
+    //dataFiles.push_back("/windows/sptData/201507071508/");
+    //dataFiles.push_back("/windows/sptData/201508182024/");
+    //dataFiles.push_back("/windows/sptData/201510091500/");
+
     string calibFolder = "/windows/sptData/SPTS/Horizontaly/";
     string noisyMaskFile = "results/noisyMask";
     //string resultsFile = "results/";
@@ -76,10 +85,16 @@ int main(int argc, char* argv[])
 
     myFrameHolder.SetName(resultsFile);
     myFrameHolder.SetNoisyMaskFileName(noisyMaskFile);
-    myFrameHolder.PreMasking(dataFiles,threshold);
-    myFrameHolder.ReadData(dataFiles);
-    myFrameHolder.LoadCalib(calibFolder,useCalib);
-    myFrameHolder.ProduceResults(threshold);
-
+    if (strcmp(argv[2], "1") == 0)
+    {
+        if (argc == 4)
+            threshold = atoi(argv[3]);
+        myFrameHolder.PreMasking(dataFiles,threshold);
+    }else
+    {
+        myFrameHolder.ReadData(dataFiles);
+        myFrameHolder.LoadCalib(calibFolder,useCalib);
+        myFrameHolder.ProduceResults(threshold);
+    }
 	return 0;
 }
