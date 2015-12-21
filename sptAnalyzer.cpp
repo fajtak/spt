@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
     {
         if (argc == 4)
             threshold = atoi(argv[3]);
-        myFrameHolder.PreMasking(dataFiles,threshold);
+        myFrameHolder.PreMasking(dataFiles,threshold,resultsFile);
     }else
     {
         myFrameHolder.ReadData(dataFiles);

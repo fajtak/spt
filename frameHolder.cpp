@@ -67,7 +67,7 @@ void FrameHolder::ReadData(vector<string> &dataFiles)
     cout << "Data per " << acqTimeWD/3600/24 << " days / " << time/3600/24 << " days" << endl;
 }
 
-void FrameHolder::PreMasking(vector<string> &dataFiles, int threshold)
+void FrameHolder::PreMasking(vector<string> &dataFiles, int threshold, string resultsFile)
 {
     for (int idFile = 0 ; idFile < dataFiles.size() ; idFile++)
     {
@@ -130,7 +130,8 @@ void FrameHolder::PreMasking(vector<string> &dataFiles, int threshold)
         }
     hNCountOnPixel->Draw();
     myCan->SetLogy();
-    string fileName = m_rootFileName.substr(m_rootFileName.size()-10,5);
+    string fileName = resultsFile;
+    fileName += m_rootFileName.substr(m_rootFileName.size()-10,5);
     fileName += ".png";
     myCan->SaveAs(fileName.c_str());
     delete hNCountOnPixel;
